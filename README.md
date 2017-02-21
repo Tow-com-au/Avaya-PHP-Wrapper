@@ -10,12 +10,9 @@ AvayaSocket - More complicated wrapper using TCP connection
 
 Courtesy of the Tow.com.au team :) - https://www.tow.com.au
 
-## 2. Example
+## 2. SOAP Example
 
 ```
-
-// Make a call with AvayaSOAP class
-
 $wsdl = "https://my-avaya-server-ip:443/axis/services/TelephonyService?wsdl";
 
 // SOAP login details (you might need an account made just for SOAP)
@@ -35,9 +32,11 @@ $call_response = $avaya->request('makeCall', [
 	'originatingExtension' => $my_extension,
 	'originatingNumber' => $destination_extension,
 ]);
+```
 
+## 3. Socket Example
 
-// Make a call with AvayaSocket class
+```
 $host = 'my-avaya-server-ip';
 $port = 4171;
 $switchName = 'MySwitch';
@@ -56,9 +55,12 @@ $destination_extension = 201;
 
 $callID = $avaya->makeCall(my_extension, $destination_extension);
 
+sleep(1);
+
+$avaya->holdCall($my_extension, callID); // (not working for me - sharnw)
 
 ```
 
-## 3. TODO
+## 4. TODO
 
 Composer package
