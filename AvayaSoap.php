@@ -1,6 +1,6 @@
 <?php
 
-class AvayaWrapper {
+class AvayaSoap {
 
 	private $soap, $sessionID = false;
 
