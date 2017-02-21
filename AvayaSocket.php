@@ -269,7 +269,7 @@ class AvayaSocket {
 
 		$read = socket_read($socket, 1024);
 		
-		$response_xml = substr($read, 8);
+		$response_xml = substr($read, 8); // lazy load, just ignoring headers
 		if ($show_xml) {
 			echo $response_xml.PHP_EOL;
 		}
