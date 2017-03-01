@@ -57,7 +57,19 @@ $callID = $avaya->makeCall(my_extension, $destination_extension);
 
 sleep(1);
 
-$avaya->holdCall($my_extension, callID); // (not working for me - sharnw)
+$avaya->holdCall($my_extension, callID);
+
+sleep(5);
+
+$avaya->retrieveCall($my_extension, callID);
+
+sleep(5);
+
+$avaya->generateDigits($my_extension, callID, '1');
+
+sleep(2);
+
+$avaya->clearCall($my_extension, callID);
 
 ```
 

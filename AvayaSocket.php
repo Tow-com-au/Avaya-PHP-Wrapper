@@ -76,7 +76,6 @@ class AvayaSocket {
 		$request_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" .
 		            "<StopApplicationSession " . $this->xmlns_xsi ."   " . $this->xmlns_xsd ." xmlns=\"http://www.ecma-international.org/standards/ecma-354/appl_session\">" .
 		                "<sessionID>" . $this->sessionID . "</sessionID>" .
-		                "</requestedProtocolVersions>" .
 		                "<sessionEndReason>" .
 		                	"<appEndReason>Application Request</appEndReason>" .
 		                "</sessionEndReason>" .
@@ -99,7 +98,7 @@ class AvayaSocket {
 		                "<snapshotObject typeOfNumber=\"other\" mediaClass=\"notKnown\">" . $agent . ':' . $this->switchName . "::0</snapshotObject>" .
 		            "</SnapshotDevice>";
 
-		$xml = $this->sendXml($request_xml);
+		$xml = $this->sendXml($request_xml, true);
 		if ($xml) {
 			if (isset($xml->crossRefIDorSnapshotData->snapshotData->snapshotDeviceResponseInfo->connectionIdentifier->callID)) {
 				return $xml->crossRefIDorSnapshotData->snapshotData->snapshotDeviceResponseInfo->connectionIdentifier->callID;
@@ -127,7 +126,34 @@ class AvayaSocket {
 
 		$xml = $this->sendXml($request_xml);
 		if ($xml) {
-			return $xml->callingDevice->callID;
+			// $callLinkageID = $xml->extensions->privateData->private->children('ns1', true)->MakeCallResponsePrivateData->callLinkageData->globalCallData->globalCallLinkageID->globallyUniqueCallLinkageID;
+			// having issues getting callLinkageID via namespace.. had to regex
+			preg_match('#<globallyUniqueCallLinkageID>(.+?)</globallyUniqueCallLinkageID>#is', $this->last_raw_xml, $linkage_tag);
+			$callLinkageID = isset($linkage_tag[1]) ? $linkage_tag[1] : false;
+
+			return (object) [
+				'callLinkageID' => $callLinkageID, // useful for reporting
+				'callID' => $xml->callingDevice->callID[0] // used for clear/hold etc
+			];
+		}
+		else {
+			return false;
+		}
+	}
+
+	public function retrieveCall($agent, $callID) {
+		$request_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" .
+		            "<RetrieveCall " . $this->xmlns_xsi ."   " . $this->xmlns_xsd ." xmlns=\"http://www.ecma-international.org/standards/ecma-354/appl_session\">" .
+		            	"<callToBeRetrieved>" .
+		            		"<deviceID typeOfNumber=\"other\" mediaClass=\"notKnown\">".$agent.":".$this->switchName."::0</deviceID>" .
+		            		"<callID>".$callID."</callID>" .
+		            	"</callToBeRetrieved>" .
+		            "</RetrieveCall>";
+
+		$xml = $this->sendXml($request_xml);
+		if ($xml) {
+			if (isset($xml->unspecified)) return false; // unspecified error
+			return true;
 		}
 		else {
 			return false;
@@ -138,12 +164,12 @@ class AvayaSocket {
 		$request_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" .
 		            "<HoldCall " . $this->xmlns_xsi ."   " . $this->xmlns_xsd ." xmlns=\"http://www.ecma-international.org/standards/ecma-354/appl_session\">" .
 		            	"<callToBeHeld>" .
-		            		"<deviceID typeOfNumber=\"other\" mediaClass=\"notKnown\">".$agent.":"+$this->switchName+"::0</deviceID>" .
+		            		"<deviceID typeOfNumber=\"other\" mediaClass=\"notKnown\">".$agent.":".$this->switchName."::0</deviceID>" .
 		            		"<callID>".$callID."</callID>" .
 		            	"</callToBeHeld>" .
 		            "</HoldCall>";
 
-		$xml = $this->sendXml($request_xml);
+		$xml = $this->sendXml($request_xml, true);
 		if ($xml) {
 			if (isset($xml->unspecified)) return false; // unspecified error
 			return true;
@@ -157,13 +183,9 @@ class AvayaSocket {
 		$request_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" .
 		            "<ClearCall " . $this->xmlns_xsi ."   " . $this->xmlns_xsd ." xmlns=\"http://www.ecma-international.org/standards/ecma-354/appl_session\">" .
 		            	"<callToBeCleared>" .
-		            		"<deviceID typeOfNumber=\"other\" mediaClass=\"notKnown\">".$agent.":"+$this->switchName+"::0</deviceID>" .
+		            		"<deviceID>".$agent.":".$this->switchName."::0</deviceID>" .
 		            		"<callID>".$callID."</callID>" .
 		            	"</callToBeCleared>" .
-		            	"<userData>" .
-		            		"<string></string>" .
-		            	"</userData>" .
-		                "<reason>Application Request</reason>" .
 		            "</ClearCall>";
 
 		$xml = $this->sendXml($request_xml);
@@ -176,50 +198,19 @@ class AvayaSocket {
 		}
 	}
 
-	public function GetDisplay($agent) {
+	// dial a sequence of digits - working perfectly
+	public function generateDigits($agent, $callID, $digits) {
 		$request_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" .
-		            "<GetDisplay " . $this->xmlns_xsi ."   " . $this->xmlns_xsd ." xmlns=\"http://www.ecma-international.org/standards/ecma-354/appl_session\">" .
-		            	"<deviceID typeOfNumber=\"other\" mediaClass=\"notKnown\">".$agent.":".$this->switchName."::0</deviceID>" .
-		           		// "<DisplayID>0</DisplayID>".
-		            "</GetDisplay>";
-
-		$xml = $this->sendXml($request_xml, true);
-		if ($xml) {
-			if (isset($xml->unspecified)) return false; // unspecified error
-			return true;
-		}
-		else {
-			return false;
-		}
-	}
-
-	public function getButtonInformation($agent) {
-		$request_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" .
-		            "<GetButtonInformation " . $this->xmlns_xsi ."   " . $this->xmlns_xsd ." xmlns=\"http://www.ecma-international.org/standards/ecma-354/appl_session\">" .
-		            	"<deviceID typeOfNumber=\"other\" mediaClass=\"notKnown\">".$agent.":".$this->switchName."::0</deviceID>" .
-		           		// "<buttonID>0</buttonID>".
-		            "</GetButtonInformation>";
-
-		$xml = $this->sendXml($request_xml, true);
-		if ($xml) {
-			if (isset($xml->unspecified)) return false; // unspecified error
-			return true;
-		}
-		else {
-			return false;
-		}
-	}
-
-	public function pressButton($agent, $callID, $button) {
-		$request_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" .
-		            "<ButtonPress " . $this->xmlns_xsi ."   " . $this->xmlns_xsd ." xmlns=\"http://www.ecma-international.org/standards/ecma-354/appl_session\">" .
-		            	"<deviceID typeOfNumber=\"other\" mediaClass=\"notKnown\">".$agent.":".$this->switchName."::0</deviceID>" .
-		            	"<button>".$button."</button>".
-		            "</ButtonPress>";
+		            "<GenerateDigits " . $this->xmlns_xsi ."   " . $this->xmlns_xsd ." xmlns=\"http://www.ecma-international.org/standards/ecma-354/appl_session\">" .
+		            	"<connectionToSendDigits>".
+		            		"<deviceID typeOfNumber=\"other\" mediaClass=\"notKnown\">".$agent.":".$this->switchName."::0</deviceID>" .
+		            		"<callID>".$callID."</callID>".
+		            	"</connectionToSendDigits>".
+		            	"<charactersToSend>".$digits."</charactersToSend>".
+		            "</GenerateDigits>";
 
 		$xml = $this->sendXml($request_xml);
 		if ($xml) {
-			if (isset($xml->unspecified)) return false; // unspecified error
 			return true;
 		}
 		else {
@@ -269,7 +260,7 @@ class AvayaSocket {
 
 		$read = socket_read($socket, 1024);
 		
-		$response_xml = substr($read, 8); // lazy load, just ignoring headers
+		$response_xml = $this->last_raw_xml = substr($read, 8); // lazy load, just ignoring headers
 		if ($show_xml) {
 			echo $response_xml.PHP_EOL;
 		}
