@@ -169,7 +169,7 @@ class AvayaSocket {
 		            	"</callToBeHeld>" .
 		            "</HoldCall>";
 
-		$xml = $this->sendXml($request_xml, true);
+		$xml = $this->sendXml($request_xml);
 		if ($xml) {
 			if (isset($xml->unspecified)) return false; // unspecified error
 			return true;
