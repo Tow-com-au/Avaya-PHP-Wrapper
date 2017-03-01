@@ -53,7 +53,8 @@ $my_extension = 200;
 // another local extension
 $destination_extension = 201;
 
-$callID = $avaya->makeCall(my_extension, $destination_extension);
+$call = $avaya->makeCall(my_extension, $destination_extension);
+$callID = $call->callID;
 
 sleep(1);
 
